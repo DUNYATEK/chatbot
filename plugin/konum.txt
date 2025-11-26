@@ -1,0 +1,28 @@
+wp-content/plugins/dunyatek-chatbot/dunyatek-chatbot.php
+
+Bu eklenti:
+
+Her sayfaya 
+widget.js
+’i ve window.DUNYATEK_CHATBOT_CONFIG’i ekler.
+Shortcode kullanılan sayfaya <div id="dunyatek-chatbot-root"></div> yerleştirir.
+widget.js
+ zaten document.body’e baloncuk ve iframe eklediği için, bu root div’i zorunlu kılmıyor; ama ileride React ile doğrudan oraya render etmek istersen hazır duruyor.
+2️⃣ WordPress’te kullanım
+WordPress dosya sisteminde:
+wp-content/plugins/dunyatek-chatbot/ klasörünü oluştur.
+İçine dunyatek-chatbot.php dosyasını oluştur ve yukarıdaki kodu yapıştır.
+WordPress yönetim panelinde:
+Eklentiler → Yüklü Eklentiler.
+“Dunyatek Chatbot” eklentisini göreceksin.
+“Etkinleştir” butonuna bas.
+Herhangi bir sayfa / yazıda:
+Gutenberg editörde Kısa Kod (Shortcode) bloğu ekle.
+İçine şunu yaz:
+text
+[dunyatek_chatbot]
+Sayfayı güncelle.
+Ön yüzde (siteyi ziyaret edince):
+Sağ altta mavi 💬 baloncuğu görmelisin.
+Tıklayınca https://dunyatekchatbot.netlify.app/?embed=1&botId=123 adresini iframe içinde açar.
+Şu an için botId: '123' sabit; sen bunu gerçek bot ID’ninle değiştirebilirsin. İleride istersen bunu WordPress admin ayar sayfasına taşıyıp panelden değiştiririz.
