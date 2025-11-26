@@ -45,10 +45,10 @@
       iframe.id = 'dunyatek-chatbot-iframe';
 
       var botId = config.botId || '';
-      var url = 'https://dunyatekchatbot.netlify.app/?embed=1';
-      if (botId) {
-        url += '&botId=' + encodeURIComponent(botId);
-      }
+    var url = 'https://dunyatekchatbot.netlify.app/widget.html';
+        if (botId) {
+        url += '?botId=' + encodeURIComponent(botId);
+     }
       iframe.src = url;
 
       iframe.style.position = 'fixed';
