@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "ownerId": 1,
+    "name": "Dunyatek_Asistan",
+    "status": "active",
+    "messagesUsed": 6,
+    "messagesQuota": 50,
+    "createdAt": "2025-05-14"
+  },
+  {
+    "id": 2,
+    "ownerId": 1,
+    "name": "test2 botu",
+    "status": "active",
+    "messagesUsed": 0,
+    "messagesQuota": 50,
+    "createdAt": "2025-11-25",
+    "isPublic": true
+  }
+]

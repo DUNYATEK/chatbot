@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.*
+db/llm-config.json
+
+# build outputs
+frontend/dist/
+frontend/build/
