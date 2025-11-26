@@ -13,6 +13,28 @@ export async function login(email, password) {
   return res.json();
 }
 
+// Bot görünüm (appearance) ve lead form alanlarını getir
+export async function fetchBotAppearance(botId) {
+  const res = await fetch(`${API_BASE}/api/bots/${botId}/appearance`);
+  if (!res.ok) {
+    throw new Error('Appearance ayarları getirilemedi');
+  }
+  return res.json();
+}
+
+// Bot görünüm (appearance) ve lead form alanlarını kaydet
+export async function saveBotAppearance(botId, { appearance, formFields }) {
+  const res = await fetch(`${API_BASE}/api/bots/${botId}/appearance`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appearance, formFields }),
+  });
+  if (!res.ok) {
+    throw new Error('Appearance ayarları kaydedilemedi');
+  }
+  return res.json();
+}
+
 // Bot için kayıtlı PDF'leri getir
 export async function fetchBotPdfs(botId) {
   const res = await fetch(`${API_BASE}/api/bots/${botId}/pdfs`);

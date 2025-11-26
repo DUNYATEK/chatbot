@@ -7,7 +7,7 @@ const pdfParse = require('pdf-parse');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 // PDF uploadları için bellek tabanlı multer konfigürasyonu
 const upload = multer({ storage: multer.memoryStorage() });
@@ -107,6 +107,102 @@ app.post('/api/bots', (req, res) => {
   writeJson('bots.json', bots);
 
   res.status(201).json({ ok: true, bot: newBot });
+});
+
+app.get('/api/bots/:botId/appearance', (req, res) => {
+  const botId = Number(req.params.botId);
+  if (!botId) {
+    return res.status(400).json({ ok: false, message: 'Geçersiz botId' });
+  }
+
+  let all = [];
+  try {
+    all = readJson('appearances.json');
+  } catch {
+    all = [];
+  }
+
+  const entry = all.find((x) => x.botId === botId);
+
+  // Frontend'deki varsayılan değerlerle uyumlu basit bir fallback
+  const defaultAppearance = {
+    title: 'Chatbot',
+    showMessagePreview: false,
+    welcomeMessageEnabled: true,
+    welcomeMessage: 'Merhaba, size nasıl yardımcı olabilirim?',
+    welcomePopupEnabled: false,
+    suggestionsEnabled: true,
+    suggestionsText: '',
+    clearSuggestionsAfterFirstMessage: false,
+    placeholderEnabled: true,
+    placeholderText: '',
+    leadCaptureEnabled: false,
+    privacyLinkEnabled: true,
+    privacyActionText: 'Read our',
+    privacyLabelText: 'Privacy Policy',
+    privacyUrl: 'https://',
+    launcherShape: 'daire',
+    launcherPosition: 'sag',
+    launcherSize: 72,
+    launcherBarText: '',
+    themeColor: '#2563eb',
+    attentionSound: 'hicbiri',
+    launcherAnimation: 'hicbiri',
+    botAvatarUrl: '',
+    openOnLoadDesktopOnly: false,
+    hidePlatformBranding: false,
+    customBrandingEnabled: false,
+    chatWidth: 320,
+    chatHeight: 480,
+  };
+
+  const defaultFormFields = [
+    { id: 'name', label: 'Name', key: 'name', enabled: true, required: true },
+    { id: 'email', label: 'Email', key: 'email', enabled: true, required: false },
+    { id: 'phone', label: 'Phone Number', key: 'phone', enabled: true, required: true },
+    { id: 'message', label: 'Message', key: 'message', enabled: true, required: false },
+  ];
+
+  res.json({
+    ok: true,
+    botId,
+    appearance: entry && entry.appearance ? entry.appearance : defaultAppearance,
+    formFields: entry && Array.isArray(entry.formFields) ? entry.formFields : defaultFormFields,
+  });
+});
+
+app.put('/api/bots/:botId/appearance', (req, res) => {
+  const botId = Number(req.params.botId);
+  if (!botId) {
+    return res.status(400).json({ ok: false, message: 'Geçersiz botId' });
+  }
+
+  const { appearance, formFields } = req.body || {};
+  if (!appearance || typeof appearance !== 'object') {
+    return res.status(400).json({ ok: false, message: 'appearance alanı zorunludur' });
+  }
+  if (!Array.isArray(formFields)) {
+    return res.status(400).json({ ok: false, message: 'formFields bir dizi olmalıdır' });
+  }
+
+  let all = [];
+  try {
+    all = readJson('appearances.json');
+  } catch {
+    all = [];
+  }
+
+  const idx = all.findIndex((x) => x.botId === botId);
+  const entry = { botId, appearance, formFields };
+  if (idx === -1) {
+    all.push(entry);
+  } else {
+    all[idx] = entry;
+  }
+
+  writeJson('appearances.json', all);
+
+  res.json({ ok: true, botId, appearance, formFields });
 });
 
 app.get('/api/bots/:botId/qa', (req, res) => {

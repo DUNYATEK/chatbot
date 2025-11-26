@@ -14,6 +14,8 @@ import {
   crawlBotLink,
   fetchBotPdfs,
   uploadBotPdf,
+  fetchBotAppearance,
+  saveBotAppearance,
 } from '../services/api';
 
 const SECTIONS = [
@@ -117,7 +119,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
   const [hasAskedFirstQuestion, setHasAskedFirstQuestion] = useState(false);
   const [questionsFlowActive, setQuestionsFlowActive] = useState(false);
 
-  // Bot değiştiğinde Text & QA alanlarını önden yükle
+  // Bot değiştiğinde Text, QA ve Appearance alanlarını önden yükle
   useEffect(() => {
     setQaItems([]);
     setQaQuestion('');
@@ -147,6 +149,27 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
       })
       .catch((err) => {
         console.error('QA yükleme hatası', err);
+      });
+
+    // Bot için görünüm (appearance) ve form alanlarını yükle
+    fetchBotAppearance(bot.id)
+      .then((data) => {
+        if (!cancelled && data && data.ok) {
+          if (data.appearance && typeof data.appearance === 'object') {
+            setAppearance((prev) => ({
+              ...prev,
+              ...data.appearance,
+              // Başlık boş geldiyse bot adını kullanmaya devam et
+              title: data.appearance.title || bot.name || prev.title,
+            }));
+          }
+          if (Array.isArray(data.formFields)) {
+            setFormFields(data.formFields);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Appearance yükleme hatası', err);
       });
 
     return () => {
@@ -2739,6 +2762,17 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   </button>
                   <button
                     type="button"
+                    onClick={async () => {
+                      if (!bot?.id) return;
+                      try {
+                        await saveBotAppearance(bot.id, {
+                          appearance,
+                          formFields,
+                        });
+                      } catch (err) {
+                        console.error('Appearance kaydedilemedi', err);
+                      }
+                    }}
                     style={{
                       padding: '8px 20px',
                       borderRadius: 9999,
@@ -2747,7 +2781,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                       color: 'white',
                       fontSize: 14,
                       fontWeight: 600,
-                      cursor: 'not-allowed',
+                      cursor: 'pointer',
                     }}
                   >
                     Değişiklikleri Kaydet
@@ -2756,7 +2790,329 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
               </div>
             </div>
           )}
+          {/* Entegrasyonlar */}
+          {activeSection === 'integrations' && (
+            <div>
+              <div
+                style={{
+                  background: 'white',
+                  borderRadius: 12,
+                  padding: 20,
+                  boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  Entegrasyonlar
+                </h2>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: '#64748b',
+                    marginBottom: 16,
+                  }}
+                >
+                  Botunuzu farklı platformlara bağlamak için aşağıdaki entegrasyon
+                  kartlarından birini seçin.
+                </p>
 
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fit, minmax(260px, 1fr))',
+                    gap: 16,
+                  }}
+                >
+                  {/* WhatsApp */}
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 160,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '9999px',
+                          background: '#22c55e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: 18,
+                        }}
+                      >
+                        W
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                          }}
+                        >
+                          WhatsApp
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#64748b',
+                            marginTop: 2,
+                          }}
+                        >
+                          Otomatik yanıtlar için sohbet botunuzu bir WhatsApp
+                          işletme numarasına bağlayın.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      GÜNCELLEME
+                    </button>
+                  </div>
+
+                  {/* PHP tabanlı web sitesi */}
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 160,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '9999px',
+                          background: '#0f172a',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        PHP
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                          }}
+                        >
+                          PHP tabanlı web sitesi
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#64748b',
+                            marginTop: 2,
+                          }}
+                        >
+                          Botunuzu herhangi bir PHP tabanlı web sitesine birkaç
+                          satır kodla ekleyin.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      GÜNCELLEME
+                    </button>
+                  </div>
+
+                  {/* WordPress */}
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 160,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '9999px',
+                          background: '#0ea5e9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: 18,
+                        }}
+                      >
+                        W
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                          }}
+                        >
+                          WordPress
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#64748b',
+                            marginTop: 2,
+                          }}
+                        >
+                          Tek bir kod bloğuyla botunuzu WordPress sitelerinize
+                          ekleyin.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      BAĞLANMAK
+                    </button>
+                  </div>
+
+                  {/* Instagram */}
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 160,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '9999px',
+                          background:
+                            'linear-gradient(135deg,#f97316,#ec4899,#6366f1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: 18,
+                        }}
+                      >
+                        I
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                          }}
+                        >
+                          Instagram
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#64748b',
+                            marginTop: 2,
+                          }}
+                        >
+                          Instagram işletme hesabınıza gelen mesajlara yanıt
+                          vermek için chatbot'unuzu kullanın.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      GÜNCELLEME
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Henüz tasarlanmamış diğer sekmeler */}
           {activeSection !== 'overview' &&
             activeSection !== 'docs' &&
@@ -2764,7 +3120,9 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
             activeSection !== 'qa' &&
             activeSection !== 'ai' &&
             activeSection !== 'appearance' &&
-            activeSection !== 'test' && (
+            activeSection !== 'test' && 
+            activeSection !== 'integrations' &&
+            (
               <div
                 style={{
                   background: 'white',
