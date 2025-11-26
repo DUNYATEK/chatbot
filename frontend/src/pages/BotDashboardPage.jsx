@@ -2970,74 +2970,149 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   </div>
 
                   {/* WordPress */}
-                  <div
-                    style={{
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
-                      background: '#ffffff',
-                      padding: 16,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: 160,
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '9999px',
-                          background: '#0ea5e9',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: 18,
-                        }}
-                      >
-                        W
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            fontSize: 14,
-                          }}
-                        >
-                          WordPress
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: '#64748b',
-                            marginTop: 2,
-                          }}
-                        >
-                          Tek bir kod bloğuyla botunuzu WordPress sitelerinize
-                          ekleyin.
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      style={{
-                        marginTop: 12,
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 9999,
-                        border: 'none',
-                        background: '#2563eb',
-                        color: '#ffffff',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      BAĞLANMAK
-                    </button>
-                  </div>
+<div
+  style={{
+    borderRadius: 12,
+    border: '1px solid #e2e8f0',
+    background: '#ffffff',
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    minHeight: 200,
+  }}
+>
+  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: '9999px',
+        background: '#0ea5e9',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 700,
+        fontSize: 18,
+      }}
+    >
+      W
+    </div>
+    <div>
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: 14,
+        }}
+      >
+        WordPress
+      </div>
+      <div
+        style={{
+          fontSize: 12,
+          color: '#64748b',
+          marginTop: 2,
+        }}
+      >
+        WordPress sitenize Dunyatek Chatbot&apos;u eklemek için önce
+        eklentiyi indirin, sonra aşağıdaki shortcode&apos;u sayfanıza ekleyin.
+      </div>
+    </div>
+  </div>
+
+  {/* Adımlar */}
+  <div
+    style={{
+      fontSize: 12,
+      color: '#475569',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      marginBottom: 10,
+    }}
+  >
+    <div>
+      <strong>1.</strong> WordPress&apos;te Eklentiler &rarr; Yeni Ekle deyip
+      bu eklentiyi yükleyin ve etkinleştirin.
+    </div>
+    <div>
+      <strong>2.</strong> Aşağıdaki shortcode&apos;u WordPress sayfanıza
+      ekleyin.
+    </div>
+  </div>
+
+  {/* Shortcode alanı */}
+  <div
+    style={{
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center',
+      marginBottom: 8,
+    }}
+  >
+    <input
+      readOnly
+      value={`[dunyatek_chatbot bot_id=\"${bot?.id || ''}\" position=\"right-bottom\"]`}
+      style={{
+        flex: 1,
+        padding: 6,
+        borderRadius: 8,
+        border: '1px solid #cbd5e1',
+        fontSize: 12,
+        fontFamily: 'monospace',
+      }}
+    />
+    <button
+      type="button"
+      onClick={() => {
+        const text = `[dunyatek_chatbot bot_id=\"${bot?.id || ''}\" position=\"right-bottom\"]`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
+      }}
+      style={{
+        padding: '6px 10px',
+        borderRadius: 9999,
+        border: 'none',
+        background: '#2563eb',
+        color: '#ffffff',
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      Kopyala
+    </button>
+  </div>
+
+  {/* Plugin indir butonu */}
+  <button
+    type="button"
+    onClick={() => {
+      // Buraya gerçek plugin ZIP URL'ini koy
+      window.open(
+        'https://dunyatekchatbot.netlify.app/plugins/dunyatek-chatbot.zip',
+        '_blank'
+      );
+    }}
+    style={{
+      marginTop: 4,
+      width: '100%',
+      padding: '8px 12px',
+      borderRadius: 9999,
+      border: 'none',
+      background: '#0f172a',
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: 'pointer',
+    }}
+  >
+    WordPress Eklentisini İndir
+  </button>
+</div>
 
                   {/* Instagram */}
                   <div
