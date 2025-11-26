@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:4000';
+// API tabanı: Lokal geliştirmede localhost, üretimde Vite env üzerinden gelir
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 export async function login(email, password) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
