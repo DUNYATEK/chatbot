@@ -1,78 +1,205 @@
 (function () {
-  // Global config
- 
-  function createLauncher() {
-    var config = window.DUNYATEK_CHATBOT_CONFIG || {};
-    if (document.getElementById('dunyatek-chatbot-launcher')) return;
+  const globalConfig = window.DUNYATEK_CHATBOT_CONFIG || {};
+  const botId = Number(globalConfig.botId) || 1;
 
-    var btn = document.createElement('div');
-    btn.id = 'dunyatek-chatbot-launcher';
-    btn.style.position = 'fixed';
-
-    var position = (config.position || 'right-bottom').toLowerCase();
-    if (position.indexOf('left') !== -1) {
-      btn.style.left = '24px';
-    } else {
-      btn.style.right = '24px';
+  function resolveScriptOrigin() {
+    try {
+      const currentScript = document.currentScript || (function () {
+        const scripts = document.querySelectorAll('script[src]');
+        return scripts.length ? scripts[scripts.length - 1] : null;
+      })();
+      if (currentScript && currentScript.src) {
+        const scriptUrl = new URL(currentScript.src, window.location.href);
+        return scriptUrl.origin;
+      }
+    } catch (err) {
+      console.warn('Script origin çözülemedi:', err);
     }
-    btn.style.bottom = '24px';
+    return window.location.origin;
+  }
 
-    btn.style.width = '60px';
-    btn.style.height = '60px';
-    btn.style.borderRadius = '50%';
-    btn.style.background = '#2563eb';
-    btn.style.color = '#fff';
-    btn.style.display = 'flex';
-    btn.style.alignItems = 'center';
-    btn.style.justifyContent = 'center';
-    btn.style.cursor = 'pointer';
-    btn.style.boxShadow = '0 10px 25px rgba(15,23,42,0.35)';
-    btn.style.zIndex = '99999';
-    btn.style.fontSize = '26px';
-    btn.style.userSelect = 'none';
-    btn.innerText = '💬';
+  const scriptOrigin = resolveScriptOrigin();
+  const apiBase = (globalConfig.apiUrl || 'https://dunyatekchatbot.onrender.com').replace(/\/$/, '');
+  const widgetUrl = (function () {
+    if (globalConfig.widgetUrl) {
+      return globalConfig.widgetUrl;
+    }
+    try {
+      return new URL('widget.html', scriptOrigin + '/').href;
+    } catch (err) {
+      console.warn('widget.html yolu çözülemedi:', err);
+      return scriptOrigin + '/widget.html';
+    }
+  })();
 
-    document.body.appendChild(btn);
+  function fetchAppearance() {
+    return fetch(`${apiBase}/api/bots/${botId}/appearance`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.ok && data.appearance) {
+          return data.appearance;
+        }
+        throw new Error('Appearance bulunamadı');
+      });
+  }
 
-    btn.addEventListener('click', function () {
-      var iframe = document.getElementById('dunyatek-chatbot-iframe');
-      if (iframe) {
-        iframe.style.display = iframe.style.display === 'none' ? 'block' : 'none';
-        return;
-      }
+  function createWidget(appearance) {
+    if (document.getElementById('dunyatek-chatbot-launcher')) {
+      return;
+    }
 
-      iframe = document.createElement('iframe');
-      iframe.id = 'dunyatek-chatbot-iframe';
+    const launcherPosition = appearance.launcherPosition === 'sol' ? 'left' : 'right';
+    const launcherSize = appearance.launcherSize || 72;
+    const launcherFillColor = appearance.launcherFillColor || '#2563eb';
+    const launcherBorderColor = appearance.launcherBorderColor || 'rgba(15,23,42,0.25)';
+    const launcherIconColor = appearance.launcherIconColor || '#ffffff';
+    const launcherIconType = appearance.launcherIconType || 'emoji';
+    const launcherIconEmoji = appearance.launcherIconEmoji || '💬';
+    const chatIconUrl = appearance.chatIconUrl || '';
 
-      var botId = config.botId || '';
-    var url = 'https://dunyatekchatbot.netlify.app/widget.html';
-        if (botId) {
-        url += '?botId=' + encodeURIComponent(botId);
-     }
-      iframe.src = url;
+    const chatWidth = appearance.chatWidth || 360;
+    const chatHeight = appearance.chatHeight || 560;
 
-      iframe.style.position = 'fixed';
-      if (position.indexOf('left') !== -1) {
-        iframe.style.left = '24px';
-      } else {
-        iframe.style.right = '24px';
-      }
-      iframe.style.bottom = '96px';
-      iframe.style.width = '400px';
-      iframe.style.height = '600px';
-      iframe.style.border = 'none';
-      iframe.style.borderRadius = '16px';
-      iframe.style.boxShadow = '0 10px 30px rgba(15,23,42,0.35)';
-      iframe.style.zIndex = '99999';
-      iframe.allow = 'clipboard-write; microphone;';
+    const iframe = document.createElement('iframe');
+    iframe.id = 'dunyatek-chatbot-iframe';
+    iframe.src = `${widgetUrl}?botId=${encodeURIComponent(botId)}`;
+    iframe.style.cssText = `
+      position: fixed;
+      bottom: ${launcherSize + 36}px;
+      ${launcherPosition}: 24px;
+      width: ${chatWidth}px;
+      height: ${chatHeight}px;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 10px 35px rgba(15,23,42,0.35);
+      z-index: 99998;
+      display: none;
+      background: white;
+    `;
+    iframe.setAttribute('allow', 'clipboard-write; microphone;');
+    document.body.appendChild(iframe);
 
-      document.body.appendChild(iframe);
+    const toggleButton = document.createElement('div');
+    toggleButton.id = 'dunyatek-chatbot-launcher';
+    toggleButton.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      ${launcherPosition}: 24px;
+      width: ${launcherSize}px;
+      height: ${launcherSize}px;
+      background: ${launcherFillColor};
+      color: ${launcherIconColor};
+      border-radius: ${appearance.launcherShape === 'kare' ? '16px' : '9999px'};
+      border: 1px solid ${launcherBorderColor};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(15,23,42,0.35);
+      z-index: 100000;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+    `;
+
+    if (launcherIconType === 'image' && chatIconUrl) {
+      const img = document.createElement('img');
+      img.src = chatIconUrl;
+      img.alt = 'Chat icon';
+      img.style.width = '60%';
+      img.style.height = '60%';
+      img.style.objectFit = 'contain';
+      toggleButton.appendChild(img);
+    } else {
+      toggleButton.innerText = globalConfig.buttonText || launcherIconEmoji;
+      toggleButton.style.fontSize = `${Math.max(20, launcherSize * 0.45)}px`;
+    }
+
+    const bubbleTail = document.createElement('span');
+    bubbleTail.style.cssText = `
+      position: absolute;
+      ${launcherPosition === 'left' ? 'left: 12px;' : 'right: 12px;'}
+      bottom: -7px;
+      width: 16px;
+      height: 16px;
+      background: ${launcherFillColor};
+      transform: rotate(45deg);
+      border-bottom: 1px solid ${launcherBorderColor};
+      border-${launcherPosition === 'left' ? 'right' : 'left'}: 1px solid ${launcherBorderColor};
+      border-top: none;
+      border-${launcherPosition === 'left' ? 'left' : 'right'}: none;
+      z-index: -1;
+    `;
+    toggleButton.style.position = 'fixed';
+    toggleButton.style.padding = '0';
+    toggleButton.appendChild(bubbleTail);
+
+    toggleButton.addEventListener('mouseenter', () => {
+      toggleButton.style.transform = 'scale(1.05)';
+      toggleButton.style.boxShadow = '0 12px 30px rgba(15,23,42,0.4)';
     });
+    toggleButton.addEventListener('mouseleave', () => {
+      toggleButton.style.transform = 'scale(1)';
+      toggleButton.style.boxShadow = '0 8px 25px rgba(15,23,42,0.35)';
+    });
+
+    document.body.appendChild(toggleButton);
+
+    let isOpen = false;
+    const metaPayload = {
+      headerHeight: appearance.headerHeight || 56,
+      avatarSize: appearance.avatarSize || Math.max(Math.round((appearance.headerHeight || 56) * 0.6), 28),
+      avatarBackground: appearance.avatarBackground || 'rgba(255,255,255,0.3)',
+    };
+
+    function toggleChat() {
+      isOpen = !isOpen;
+      iframe.style.display = isOpen ? 'block' : 'none';
+
+      if (isOpen) {
+        toggleButton.style.transform = 'scale(0.92)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(15,23,42,0.35)';
+        const welcomeEvent = {
+          type: 'CHAT_EVENT',
+          event: 'welcome',
+          message: appearance.welcomeMessage || 'Merhaba, size nasıl yardımcı olabilirim?',
+          meta: metaPayload,
+        };
+        iframe.contentWindow?.postMessage(welcomeEvent, '*');
+      } else {
+        toggleButton.style.transform = 'scale(1)';
+        toggleButton.style.boxShadow = '0 8px 25px rgba(15,23,42,0.35)';
+      }
+    }
+
+    toggleButton.addEventListener('click', toggleChat);
+
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'CHAT_EVENT' && event.data.action === 'close') {
+        isOpen = false;
+        iframe.style.display = 'none';
+        toggleButton.style.transform = 'scale(1)';
+        toggleButton.style.boxShadow = '0 8px 25px rgba(15,23,42,0.35)';
+      }
+    });
+
+    if (appearance.openOnLoadDesktopOnly && window.innerWidth >= 768) {
+      setTimeout(() => {
+        if (!isOpen) toggleChat();
+      }, 800);
+    }
+  }
+
+  function init() {
+    fetchAppearance()
+      .then(createWidget)
+      .catch((err) => {
+        console.error('Dunyatek Chatbot yüklenirken hata:', err);
+      });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createLauncher);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    createLauncher();
+    init();
   }
 })();

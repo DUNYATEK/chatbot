@@ -235,38 +235,70 @@
             console.error('Appearance alınamadı', err);
           });
 
+        async function sendMessage(text) {
+          appendMessage(text, 'user');
+          inputEl.value = '';
+
+          var payload = {
+            message: text,
+            botId: botId,
+          };
+
+          function safeJson(res) {
+            return res
+              .json()
+              .catch(function () {
+                return null;
+              });
+          }
+
+          try {
+            var reply = '';
+
+            // Önce QA/Metin/Link/PDF tabanlı cevabı dene
+            var kbResponse = await fetch(API_BASE + '/api/chat', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            });
+            if (kbResponse.ok) {
+              var kbData = await safeJson(kbResponse);
+              if (kbData && kbData.ok && kbData.reply) {
+                reply = kbData.reply;
+              }
+            }
+
+            // Gerekirse LLM'e düş
+            if (!reply) {
+              var llmResponse = await fetch(API_BASE + '/api/chat-llm', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+              });
+              if (llmResponse.ok) {
+                var llmData = await safeJson(llmResponse);
+                if (llmData && llmData.ok && llmData.reply) {
+                  reply = llmData.reply;
+                }
+              }
+            }
+
+            appendMessage(reply || 'Şu anda yanıt veremiyorum.', 'bot');
+          } catch (err) {
+            console.error('Chat hatası', err);
+            appendMessage('Sunucuya bağlanırken hata oluştu.', 'bot');
+          }
+        }
+
         formEl.addEventListener('submit', function (e) {
           e.preventDefault();
           var text = (inputEl.value || '').trim();
           if (!text) return;
-
-          appendMessage(text, 'user');
-          inputEl.value = '';
-
-          fetch(API_BASE + '/api/chat-llm', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: text,
-              botId: botId,
-            }),
-          })
-            .then(function (res) {
-              return res.json();
-            })
-            .then(function (data) {
-              if (data && data.ok && data.reply) {
-                appendMessage(data.reply, 'bot');
-              } else {
-                appendMessage('Şu anda yanıt veremiyorum.', 'bot');
-              }
-            })
-            .catch(function (err) {
-              console.error('Chat hatası', err);
-              appendMessage('Sunucuya bağlanırken hata oluştu.', 'bot');
-            });
+          sendMessage(text);
         });
       })();
     </script>
