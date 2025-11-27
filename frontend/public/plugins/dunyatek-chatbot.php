@@ -33,7 +33,8 @@ add_action( 'wp_enqueue_scripts', 'dunyatek_chatbot_enqueue_scripts' );
 function dunyatek_chatbot_shortcode( $atts ) {
     $atts = shortcode_atts(
         array(
-            'bot_id'   => '',
+            // Backend tarafından zip oluşturulurken __BOT_ID__ değeri gerçek bot kimliğiyle değiştirilecektir.
+            'bot_id'   => '__BOT_ID__',
             'position' => 'right-bottom',
         ),
         $atts,

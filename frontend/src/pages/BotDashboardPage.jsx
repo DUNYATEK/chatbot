@@ -18,6 +18,7 @@ import {
   saveBotAppearance,
   updateBotName,
   API_BASE,
+  downloadBotPluginZip,
 } from '../services/api';
 
 const SECTIONS = [
@@ -120,6 +121,8 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
   const [leadFormErrors, setLeadFormErrors] = useState({});
   const [leadFormCompleted, setLeadFormCompleted] = useState(false);
   const [appearanceSaveMessage, setAppearanceSaveMessage] = useState(null);
+  const [pluginZipMessage, setPluginZipMessage] = useState(null);
+  const [pluginZipLoading, setPluginZipLoading] = useState(false);
 
   const headerHeightValue = appearance?.headerHeight || 56;
   const avatarSizeValue = appearance?.avatarSize || Math.max(Math.round(headerHeightValue * 0.6), 28);
@@ -133,6 +136,32 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
     if (!bot?.id) return;
     const url = `${API_BASE}/api/bots/${bot.id}/php-integration`;
     window.open(url, '_blank');
+  };
+
+  const handleDownloadPluginZipFile = async () => {
+    if (!bot?.id) {
+      setPluginZipMessage({ type: 'error', text: 'Bot ID bulunamadı. Önce bot seçiniz.' });
+      return;
+    }
+    setPluginZipLoading(true);
+    setPluginZipMessage(null);
+    try {
+      const blob = await downloadBotPluginZip(bot.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dunyatek-chatbot-bot-${bot.id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setPluginZipMessage({ type: 'success', text: 'WordPress eklenti ZIP’i indirildi.' });
+    } catch (err) {
+      console.error('ZIP indirilemedi', err);
+      setPluginZipMessage({ type: 'error', text: 'ZIP oluşturulamadı. Lütfen tekrar deneyin.' });
+    } finally {
+      setPluginZipLoading(false);
+    }
   };
 
   const handleCopyWordpressShortcode = async () => {
@@ -3190,16 +3219,17 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
               <div
                 style={{
                   background: 'white',
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: '0 4px 12px rgba(15,23,42,0.05)',
+                  borderRadius: 18,
+                  padding: 24,
+                  boxShadow: '0 25px 70px rgba(15,23,42,0.08)',
+                  border: '1px solid rgba(15,23,42,0.04)',
                 }}
               >
                 <h2
                   style={{
-                    fontSize: 18,
-                    fontWeight: 600,
-                    marginBottom: 4,
+                    fontSize: 20,
+                    fontWeight: 700,
+                    marginBottom: 6,
                   }}
                 >
                   Entegrasyonlar
@@ -3208,32 +3238,31 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   style={{
                     fontSize: 13,
                     color: '#64748b',
-                    marginBottom: 16,
+                    marginBottom: 20,
                   }}
                 >
-                  Botunuzu farklı platformlara bağlamak için aşağıdaki entegrasyon
-                  kartlarından birini seçin.
+                  Botunuzu farklı platformlara bağlamak için aşağıdaki entegrasyon kartlarından birini seçin.
                 </p>
 
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: 16,
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    gap: 20,
                   }}
                 >
                   {/* WhatsApp */}
                   <div
                     style={{
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      border: '1px solid rgba(15,23,42,0.08)',
                       background: '#ffffff',
-                      padding: 16,
+                      padding: 20,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      minHeight: 160,
+                      minHeight: 200,
+                      boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -3296,14 +3325,15 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   {/* PHP tabanlı web sitesi */}
                   <div
                     style={{
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      border: '1px solid rgba(15,23,42,0.08)',
                       background: '#ffffff',
-                      padding: 16,
+                      padding: 20,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      minHeight: 200,
+                      minHeight: 260,
+                      boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -3416,14 +3446,15 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   {/* WordPress */}
                   <div
                     style={{
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      border: '1px solid rgba(15,23,42,0.08)',
                       background: '#ffffff',
-                      padding: 16,
+                      padding: 20,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      minHeight: 200,
+                      minHeight: 260,
+                      boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -3521,27 +3552,45 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
 
                     <button
                       type="button"
-                      onClick={() => {
-                        window.open(
-                          'https://dunyatekchatbot.netlify.app/plugins/dunyatek-chatbot.zip',
-                          '_blank',
-                        );
-                      }}
+                      onClick={handleDownloadPluginZipFile}
+                      disabled={!bot?.id || pluginZipLoading}
                       style={{
                         marginTop: 12,
                         width: '100%',
-                        padding: '8px 12px',
+                        padding: '10px 14px',
                         borderRadius: 9999,
                         border: 'none',
-                        background: '#0f172a',
+                        background: !bot?.id || pluginZipLoading ? '#94a3b8' : '#0f172a',
                         color: '#ffffff',
                         fontSize: 13,
                         fontWeight: 600,
-                        cursor: 'pointer',
+                        cursor: !bot?.id || pluginZipLoading ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
                       }}
                     >
-                      WordPress Eklentisini İndir
+                      {pluginZipLoading ? 'ZIP hazırlanıyor...' : 'WordPress Eklentisini İndir'}
                     </button>
+
+                    {pluginZipMessage && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          borderRadius: 10,
+                          padding: '8px 10px',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: pluginZipMessage.type === 'success' ? '#166534' : '#9f1239',
+                          background:
+                            pluginZipMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                          border:
+                            pluginZipMessage.type === 'success'
+                              ? '1px solid #bbf7d0'
+                              : '1px solid #fecdd3',
+                        }}
+                      >
+                        {pluginZipMessage.text}
+                      </div>
+                    )}
 
                     <p
                       style={{
@@ -3558,14 +3607,15 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   {/* Instagram */}
                   <div
                     style={{
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      border: '1px solid rgba(15,23,42,0.08)',
                       background: '#ffffff',
-                      padding: 16,
+                      padding: 20,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      minHeight: 160,
+                      minHeight: 200,
+                      boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>

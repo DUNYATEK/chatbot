@@ -35,6 +35,14 @@ export async function saveBotAppearance(botId, { appearance, formFields }) {
   return res.json();
 }
 
+export async function downloadBotPluginZip(botId) {
+  const res = await fetch(`${API_BASE}/api/bots/${botId}/plugin-zip`);
+  if (!res.ok) {
+    throw new Error('ZIP indirilemedi');
+  }
+  return res.blob();
+}
+
 // Bot için kayıtlı PDF'leri getir
 export async function fetchBotPdfs(botId) {
   const res = await fetch(`${API_BASE}/api/bots/${botId}/pdfs`);
