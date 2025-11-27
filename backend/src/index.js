@@ -920,38 +920,113 @@ app.post('/api/chat-llm', async (req, res, next) => {
 });
 
 // LLM durumunu dönen endpoint (anahtarı asla geri döndürmez)
-app.get('/api/llm/status', (req, res) => {
-  const configured = !!runtimeOpenAiApiKey;
-  res.json({
-    ok: true,
-    provider: config.llm.provider,
-    model: config.llm.openaiModel,
-    configured,
-  });
+// Bot adını güncelle
+app.put('/api/bots/:botId', (req, res, next) => {
+  try {
+    const botId = Number(req.params.botId);
+    const { name } = req.body || {};
+
+    if (!botId || !name || typeof name !== 'string') {
+      return res.status(400).json({ ok: false, message: 'Geçersiz botId veya name' });
+    }
+
+    const bots = readJson('bots.json');
+    const idx = bots.findIndex((b) => b.id === botId);
+    if (idx === -1) {
+      return res.status(404).json({ ok: false, message: 'Bot bulunamadı' });
+    }
+
+    bots[idx].name = name;
+    writeJson('bots.json', bots);
+
+    res.json({ ok: true, bot: bots[idx] });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Panelden geçici OpenAI key ve model ayarlamak için endpoint (sadece RAM'de tutulur)
-app.post('/api/llm/config', (req, res) => {
-  const { apiKey, model } = req.body || {};
-  if (!apiKey || typeof apiKey !== 'string') {
-    return res.status(400).json({ ok: false, message: 'apiKey alanı zorunludur' });
-  }
-
-  runtimeOpenAiApiKey = apiKey.trim();
-  if (model && typeof model === 'string') {
-    config.llm.openaiModel = model.trim();
-  }
-  // Geçerli anahtarı ve modeli kalıcı olarak db/llm-config.json içine yaz
+// Bot için PHP entegrasyon dosyası oluşturup indiren endpoint
+app.get('/api/bots/:botId/php-integration', (req, res) => {
   try {
-    writeJson('llm-config.json', {
-      apiKey: runtimeOpenAiApiKey,
-      model: config.llm.openaiModel,
-    });
-  } catch (e) {
-    console.error('llm-config.json yazılırken hata:', e);
-  }
+    const botId = Number(req.params.botId);
+    if (!botId) {
+      return res.status(400).json({ ok: false, message: 'Geçersiz botId' });
+    }
 
-  res.json({ ok: true });
+    const bots = readJson('bots.json');
+    const bot = bots.find((b) => b.id === botId);
+    if (!bot) {
+      return res.status(404).json({ ok: false, message: 'Bot bulunamadı' });
+    }
+
+    const host = req.get('host') || 'localhost';
+    const nowIso = new Date().toISOString();
+    const phpCode = `<?php
+/**
+ * Dunyatek Chatbot Entegrasyon Kodu
+ * Bot ID: ${botId}
+ * Bot Adı: ${bot.name}
+ * Oluşturulma Tarihi: ${nowIso}
+ */
+
+// Bot ID'si
+define('DUNYATEK_BOT_ID', ${botId});
+
+// API URL'si (gerekiyorsa güncelleyin)
+define('DUNYATEK_API_URL', 'https://${host}');
+
+if (!function_exists('dunyatek_chatbot_load_widget')) {
+    function dunyatek_chatbot_load_widget() {
+        ?>
+        <div id="dunyatek-chatbot-container"></div>
+        <script>
+        window.dunyatekChatbotConfig = {
+            botId: <?php echo DUNYATEK_BOT_ID; ?>,
+            apiUrl: '<?php echo DUNYATEK_API_URL; ?>',
+            buttonText: '💬',
+            buttonColor: '#2563eb',
+            position: 'right',
+            autoInit: true
+        };
+
+        (function() {
+            var script = document.createElement('script');
+            script.src = '<?php echo DUNYATEK_API_URL; ?>/php-integration/widget.js';
+            script.async = true;
+            document.body.appendChild(script);
+        })();
+        </script>
+        <?php
+    }
+}
+
+if (!function_exists('dunyatek_chatbot_shortcode')) {
+    function dunyatek_chatbot_shortcode() {
+        ob_start();
+        dunyatek_chatbot_load_widget();
+        return ob_get_clean();
+    }
+    if (function_exists('add_shortcode')) {
+        add_shortcode('dunyatek_chatbot', 'dunyatek_chatbot_shortcode');
+    }
+}
+
+if (!defined('WPINC') && php_sapi_name() !== 'cli' && basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+    dunyatek_chatbot_load_widget();
+}
+?>`;
+
+    res.set({
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="dunyatek-chatbot-${botId}.php"`,
+      'Content-Length': Buffer.byteLength(phpCode, 'utf8'),
+    });
+
+    return res.send(phpCode);
+  } catch (error) {
+    console.error('PHP entegrasyon dosyası oluşturulurken hata:', error);
+    return res.status(500).json({ ok: false, message: 'PHP dosyası oluşturulamadı' });
+  }
 });
 
 // 404 için standart JSON cevap

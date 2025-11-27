@@ -16,6 +16,8 @@ import {
   uploadBotPdf,
   fetchBotAppearance,
   saveBotAppearance,
+  updateBotName,
+  API_BASE,
 } from '../services/api';
 
 const SECTIONS = [
@@ -48,6 +50,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
     { id: 1, from: 'bot', text: 'Yapay Zekâ Asistanıyım, siten için buradayım.' },
   ]);
   const [input, setInput] = useState('');
+  const [botNameInput, setBotNameInput] = useState(bot?.name || '');
   const [trainingText, setTrainingText] = useState('');
   const [qaItems, setQaItems] = useState([]);
   const [qaQuestion, setQaQuestion] = useState('');
@@ -89,6 +92,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
     attentionSound: 'hicbiri',
     launcherAnimation: 'hicbiri',
     botAvatarUrl: '',
+    chatIconUrl: '',
     openOnLoadDesktopOnly: false,
     hidePlatformBranding: false,
     customBrandingEnabled: false,
@@ -112,6 +116,41 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
   });
   const [leadFormErrors, setLeadFormErrors] = useState({});
   const [leadFormCompleted, setLeadFormCompleted] = useState(false);
+
+  const handleDownloadPhpIntegration = () => {
+    if (!bot?.id) return;
+    const url = `${API_BASE}/api/bots/${bot.id}/php-integration`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyWordpressShortcode = async () => {
+    if (!bot?.id) return;
+    const shortcode = `[dunyatek_chatbot bot_id="${bot.id}"]`;
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shortcode);
+      } else {
+        throw new Error('Clipboard API desteklenmiyor');
+      }
+      alert('WordPress kısa kodu panoya kopyalandı.');
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = shortcode;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        alert('WordPress kısa kodu panoya kopyalandı.');
+      } catch (copyErr) {
+        alert('Kısa kod kopyalanamadı, lütfen manuel kopyalayın.');
+      }
+      document.body.removeChild(textarea);
+    }
+  };
 
   // Öneriler alanından (appearance.suggestionsText) gelen, botun sırayla soracağı sorular
   const [scriptedQuestions, setScriptedQuestions] = useState([]);
@@ -172,10 +211,36 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
         console.error('Appearance yükleme hatası', err);
       });
 
+    // Eğer aktif sekme 'ai' ise LLM durumunu kontrol et
+    if (activeSection === 'ai') {
+      getLlmStatus()
+        .then((data) => {
+          setLlmStatus({
+            configured: !!data.configured,
+            provider: data.provider || 'openai',
+            model: data.model || '',
+          });
+          setLlmModelInput(data.model || 'gpt-4.1-mini');
+        })
+        .catch((err) => console.error('LLM durumu alınamadı:', err));
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [bot?.id]);
+  }, [bot?.id, activeSection]);
+
+  // Öneriler alanından (appearance.suggestionsText) gelen, botun sırayla soracağı sorular
+  useEffect(() => {
+    const raw = appearance?.suggestionsText || '';
+    const lines = raw
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    setScriptedQuestions(lines);
+    // Soruları güncelliyoruz ama devam eden bir sohbeti bozmayalım diye
+    // currentQuestionIndex / hasAskedFirstQuestion değerlerini koruyoruz.
+  }, [appearance?.suggestionsText]);
 
   // AI Ayarı sekmesi açıldığında LLM durumunu yükle
   useEffect(() => {
@@ -192,9 +257,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
           setLlmModelInput(data.model || 'gpt-4.1-mini');
         }
       })
-      .catch((err) => {
-        console.error('LLM durumu yüklenemedi', err);
-      });
+      .catch((err) => console.error('LLM durumu yüklenemedi', err));
 
     if (bot?.id) {
       fetchBotPrompt(bot.id)
@@ -208,26 +271,6 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
         });
     }
   }, [activeSection, bot?.id]);
-
-  // appearance.suggestionsText değiştiğinde satır satır soruları hazırla
-  useEffect(() => {
-    const raw = appearance?.suggestionsText || '';
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    setScriptedQuestions(lines);
-    // Soruları güncelliyoruz ama devam eden bir sohbeti bozmayalım diye
-    // currentQuestionIndex / hasAskedFirstQuestion değerlerini koruyoruz.
-  }, [appearance?.suggestionsText]);
-
-  // Daha önce: lead formdan sonra otomatik ilk soru soruyorduk.
-  // Artık sorular, kullanıcının mesajında web hizmetleriyle ilgili niyet gördüğümüzde
-  // handleSend içinde başlatılacak; bu effect sadece state hazırlığı için bırakıldı.
-  useEffect(() => {
-    // leadFormCompleted veya suggestionsEnabled değiştiğinde akışı sıfırlamak istiyorsak
-    // burada ileride ek mantık kurabiliriz. Şimdilik herhangi bir otomatik soru yok.
-  }, [appearance.suggestionsEnabled, leadFormCompleted]);
 
   // Docs (Bağlantılar / Belgeler) sekmesi açıkken bu botun linklerini ve PDF'lerini yükle
   useEffect(() => {
@@ -451,8 +494,83 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
             }}
           >
             <div>
-              <div style={{ fontSize: 20, fontWeight: 600 }}>
-                {bot?.name || 'Bot'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <input
+                  type="text"
+                  value={botNameInput}
+                  onChange={(e) => setBotNameInput(e.target.value)}
+                  style={{
+                    fontSize: '20px',
+                    fontWeight: 600,
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #e2e8f0',
+                    minWidth: '200px',
+                    maxWidth: '300px',
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!bot?.id) {
+                      console.error('Bot ID bulunamadı');
+                      return;
+                    }
+                    
+                    const newName = botNameInput.trim();
+                    if (!newName) {
+                      console.error('Bot adı boş olamaz');
+                      return;
+                    }
+                    
+                    if (newName === bot.name) {
+                      return; // Aynı isimse işlem yapma
+                    }
+                    
+                    try {
+                      console.log('Updating bot name to:', newName);
+                      
+                      // API'yi güncelle
+                      const response = await updateBotName(bot.id, newName);
+                      console.log('Update response:', response);
+                      
+                      if (response && response.ok) {
+                        // Başarılı olursa, üst bileşene yeni bot adını bildir
+                        if (onBotUpdated) {
+                          const updatedBot = { ...bot, name: newName };
+                          console.log('Calling onBotUpdated with:', updatedBot);
+                          onBotUpdated(updatedBot);
+                        }
+                        console.log('Bot name updated successfully');
+                      } else {
+                        console.error('Update failed:', response);
+                        setBotNameInput(bot.name || '');
+                      }
+                      
+                    } catch (err) {
+                      console.error('Bot adı güncellenirken hata:', err);
+                      // Hata mesajını kullanıcıya göster
+                      // alert('Bot adı güncellenirken bir hata oluştu: ' + (err.message || 'Bilinmeyen hata'));
+                      
+                      // Input alanını eski değere geri döndür
+                      setBotNameInput(bot.name || '');
+                    }
+                  }}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: '#2563eb',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Kaydet
+                </button>
               </div>
               <div style={{ fontSize: 12, color: '#64748b' }}>
                 {activeSection === 'overview'
@@ -2129,6 +2247,98 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   </div>
                 </section>
 
+                {/* Chat İkonu */}
+                <section>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span
+                      style={{ fontWeight: 600 }}
+                    >
+                      Chat İkonu
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        background: '#e2e8f0',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 24,
+                      }}
+                    >
+                      {appearance.chatIconUrl ? (
+                        <img
+                          src={appearance.chatIconUrl}
+                          alt="Chat İkonu"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      ) : (
+                        '💬'
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            const result = reader.result;
+                            if (typeof result === 'string') {
+                              setAppearance((prev) => ({
+                                ...prev,
+                                chatIconUrl: result,
+                              }));
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: 4,
+                          borderRadius: 8,
+                          border: '1px solid #d0d7e2',
+                          fontSize: 12,
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: '#94a3b8',
+                          marginTop: 2,
+                        }}
+                      >
+                        Sohbet simgesi olarak görüntülenecek küçük ikon (32x32px önerilir).
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
                 {/* Hoş Geldiniz Mesajı */}
                 <section>
                   <div
@@ -2909,7 +3119,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      minHeight: 160,
+                      minHeight: 200,
                     }}
                   >
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -2936,7 +3146,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                             fontSize: 14,
                           }}
                         >
-                          PHP tabanlı web sitesi
+                          PHP Tabanlı Web Sitesi
                         </div>
                         <div
                           style={{
@@ -2945,174 +3155,186 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                             marginTop: 2,
                           }}
                         >
-                          Botunuzu herhangi bir PHP tabanlı web sitesine birkaç
-                          satır kodla ekleyin.
+                          Botunuzu herhangi bir PHP tabanlı web sitesine birkaç satır kodla ekleyin.
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
+                    
+                    <div
                       style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
                         marginTop: 12,
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 9999,
-                        border: 'none',
-                        background: '#2563eb',
-                        color: '#ffffff',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
                       }}
                     >
-                      GÜNCELLEME
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadPhpIntegration}
+                        disabled={!bot?.id}
+                        style={{
+                          width: '100%',
+                          padding: '10px 16px',
+                          borderRadius: 10,
+                          border: 'none',
+                          background: bot?.id ? '#1d4ed8' : '#94a3b8',
+                          color: 'white',
+                          fontWeight: 600,
+                          cursor: bot?.id ? 'pointer' : 'not-allowed',
+                          fontSize: 13,
+                        }}
+                      >
+                        PHP Entegrasyon Dosyasını İndir
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyWordpressShortcode}
+                        disabled={!bot?.id}
+                        style={{
+                          width: '100%',
+                          padding: '10px 16px',
+                          borderRadius: 10,
+                          border: '1px solid #cbd5f5',
+                          background: '#f8fafc',
+                          color: '#1e293b',
+                          fontWeight: 600,
+                          cursor: bot?.id ? 'pointer' : 'not-allowed',
+                          fontSize: 13,
+                        }}
+                      >
+                        WordPress Kısa Kodunu Kopyala
+                      </button>
+
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 10,
+                          padding: 12,
+                          fontSize: 12,
+                          color: '#475569',
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Kurulum:</div>
+                        <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+                          <li>"PHP dosyasını indir" butonuna tıklayın.</li>
+                          <li>Dosyayı sitenizin kök dizinine yükleyin.</li>
+                          <li>
+                            WordPress kullanıyorsanız, sayfaya <code style={{ background: '#e2e8f0', padding: '2px 4px', borderRadius: 4 }}>[dunyatek_chatbot bot_id="{bot?.id}"]</code>{' '}shortcode'unu ekleyin.
+                          </li>
+                          <li>WordPress dışı siteler için dosyayı <code style={{ background: '#e2e8f0', padding: '2px 4px', borderRadius: 4 }}>&lt;?php include 'dunyatek-chatbot-{bot?.id}.php'; ?&gt;</code> şeklinde çağırın.</li>
+                        </ol>
+                      </div>
+                    </div>
                   </div>
 
                   {/* WordPress */}
-<div
-  style={{
-    borderRadius: 12,
-    border: '1px solid #e2e8f0',
-    background: '#ffffff',
-    padding: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: 200,
-  }}
->
-  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-    <div
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: '9999px',
-        background: '#0ea5e9',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontWeight: 700,
-        fontSize: 18,
-      }}
-    >
-      W
-    </div>
-    <div>
-      <div
-        style={{
-          fontWeight: 600,
-          fontSize: 14,
-        }}
-      >
-        WordPress
-      </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: '#64748b',
-          marginTop: 2,
-        }}
-      >
-        WordPress sitenize Dunyatek Chatbot&apos;u eklemek için önce
-        eklentiyi indirin, sonra aşağıdaki shortcode&apos;u sayfanıza ekleyin.
-      </div>
-    </div>
-  </div>
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 200,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '9999px',
+                          background: '#0ea5e9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: 18,
+                        }}
+                      >
+                        W
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                          }}
+                        >
+                          WordPress Kısa Kodu
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#64748b',
+                            marginTop: 2,
+                          }}
+                        >
+                          WordPress sayfalarınıza chatbotu eklemek için aşağıdaki kodu kullanın.
+                        </div>
+                      </div>
+                    </div>
 
-  {/* Adımlar */}
-  <div
-    style={{
-      fontSize: 12,
-      color: '#475569',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6,
-      marginBottom: 10,
-    }}
-  >
-    <div>
-      <strong>1.</strong> WordPress&apos;te Eklentiler &rarr; Yeni Ekle deyip
-      bu eklentiyi yükleyin ve etkinleştirin.
-    </div>
-    <div>
-      <strong>2.</strong> Aşağıdaki shortcode&apos;u WordPress sayfanıza
-      ekleyin.
-    </div>
-  </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: '#475569',
+                        marginBottom: 12,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <ol style={{ margin: 0, paddingLeft: 18 }}>
+                        <li>WordPress düzenleyicisinde bir kısa kod bloğu ekleyin.</li>
+                        <li>Aşağıdaki kodu yapıştırıp kaydedin.</li>
+                        <li>Sayfayı yayınlayıp chatbotu test edin.</li>
+                      </ol>
+                    </div>
 
-  {/* Shortcode alanı */}
-  <div
-    style={{
-      display: 'flex',
-      gap: 6,
-      alignItems: 'center',
-      marginBottom: 8,
-    }}
-  >
-    <input
-      readOnly
-      value={`[dunyatek_chatbot bot_id=\"${bot?.id || ''}\" position=\"right-bottom\"]`}
-      style={{
-        flex: 1,
-        padding: 6,
-        borderRadius: 8,
-        border: '1px solid #cbd5e1',
-        fontSize: 12,
-        fontFamily: 'monospace',
-      }}
-    />
-    <button
-      type="button"
-      onClick={() => {
-        const text = `[dunyatek_chatbot bot_id=\"${bot?.id || ''}\" position=\"right-bottom\"]`;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).catch(() => {});
-        }
-      }}
-      style={{
-        padding: '6px 10px',
-        borderRadius: 9999,
-        border: 'none',
-        background: '#2563eb',
-        color: '#ffffff',
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Kopyala
-    </button>
-  </div>
-
-  {/* Plugin indir butonu */}
-  <button
-    type="button"
-    onClick={() => {
-      // Buraya gerçek plugin ZIP URL'ini koy
-      window.open(
-        'https://dunyatekchatbot.netlify.app/plugins/dunyatek-chatbot.zip',
-        '_blank'
-      );
-    }}
-    style={{
-      marginTop: 4,
-      width: '100%',
-      padding: '8px 12px',
-      borderRadius: 9999,
-      border: 'none',
-      background: '#0f172a',
-      color: '#ffffff',
-      fontSize: 13,
-      fontWeight: 600,
-      cursor: 'pointer',
-    }}
-  >
-    WordPress Eklentisini İndir
-  </button>
-</div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 6,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <input
+                        readOnly
+                        value={bot?.id ? `[dunyatek_chatbot bot_id="${bot.id}"]` : '[dunyatek_chatbot bot_id="BOT_ID"]'}
+                        style={{
+                          flex: 1,
+                          padding: 6,
+                          borderRadius: 8,
+                          border: '1px solid #cbd5e1',
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: '#0f172a',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyWordpressShortcode}
+                        disabled={!bot?.id}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 9999,
+                          border: 'none',
+                          background: bot?.id ? '#2563eb' : '#94a3b8',
+                          color: 'white',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: bot?.id ? 'pointer' : 'not-allowed',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Kopyala
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Instagram */}
                   <div

@@ -11,11 +11,21 @@
   {
     "id": 2,
     "ownerId": 1,
-    "name": "test2 botu",
+    "name": "Dilek Hanım Konak1",
     "status": "active",
     "messagesUsed": 0,
     "messagesQuota": 50,
     "createdAt": "2025-11-25",
+    "isPublic": true
+  },
+  {
+    "id": 3,
+    "ownerId": 1,
+    "name": "Zenal Global",
+    "status": "active",
+    "messagesUsed": 0,
+    "messagesQuota": 50,
+    "createdAt": "2025-11-26",
     "isPublic": true
   }
 ]

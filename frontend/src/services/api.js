@@ -1,5 +1,5 @@
 // API tabanı: Lokal geliştirmede localhost, üretimde Vite env üzerinden gelir
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 export async function login(email, password) {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -157,6 +157,42 @@ export async function fetchBots() {
     throw new Error('Botlar getirilemedi');
   }
   return res.json();
+}
+
+export async function updateBotName(botId, name) {
+  try {
+    console.log('Updating bot name:', { botId, name }); // Debug log
+    
+    const response = await fetch(`${API_BASE}/api/bots/${botId}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include', // Include cookies for session
+      body: JSON.stringify({ name }),
+    });
+    
+    console.log('Update response status:', response.status); // Debug log
+    
+    if (!response.ok) {
+      let errorMessage = 'Bot adı güncellenirken bir hata oluştu';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // JSON parse hatası, varsayılan hata mesajını kullan
+      }
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Update successful:', data); // Debug log
+    return data;
+  } catch (error) {
+    console.error('Bot adı güncelleme hatası:', error);
+    throw error;
+  }
 }
 
 export async function sendChat(message, botId) {

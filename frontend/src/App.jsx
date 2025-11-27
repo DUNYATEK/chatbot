@@ -148,6 +148,14 @@ function App() {
               setSelectedBot(null);
               setShowCreateModal(true);
             }}
+            onBotUpdated={(updatedBot) => {
+              setBots(prevBots => 
+                prevBots.map(bot => 
+                  bot.id === updatedBot.id ? updatedBot : bot
+                )
+              );
+              setSelectedBot(updatedBot);
+            }}
           />
         ) : (
           <BotsListPage
