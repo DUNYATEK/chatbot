@@ -15,9 +15,18 @@
         const themeColor = appearance.themeColor || '#2563eb';
         const launcherPosition = appearance.launcherPosition === 'sol' ? 'left' : 'right';
         const launcherSize = appearance.launcherSize || 60;
+        const launcherFillColor = appearance.launcherFillColor || themeColor;
+        const launcherBorderColor = appearance.launcherBorderColor || 'rgba(15,23,42,0.25)';
+        const launcherIconColor = appearance.launcherIconColor || '#ffffff';
+        const launcherIconType = appearance.launcherIconType || 'emoji';
+        const launcherIconEmoji = appearance.launcherIconEmoji || '💬';
+        const chatIconUrl = appearance.chatIconUrl || '';
         const botTitle = appearance.title || 'Chatbot';
         const welcomeMessage = appearance.welcomeMessage || 'Merhaba, size nasıl yardımcı olabilirim?';
-        const buttonText = config.buttonText || '💬';
+        const headerHeight = appearance.headerHeight || 56;
+        const avatarSize = appearance.avatarSize || Math.max(Math.round(headerHeight * 0.6), 28);
+        const avatarBackground = appearance.avatarBackground || 'rgba(255,255,255,0.3)';
+        const buttonEmoji = config.buttonText || launcherIconEmoji;
         
         // Widget container oluştur
         const widgetContainer = document.createElement('div');
@@ -44,16 +53,27 @@
         
         // Açma/kapama butonu
         const toggleButton = document.createElement('div');
-        toggleButton.innerHTML = buttonText;
+        if (launcherIconType === 'image' && chatIconUrl) {
+          const img = document.createElement('img');
+          img.src = chatIconUrl;
+          img.alt = 'Chat icon';
+          img.style.width = '60%';
+          img.style.height = '60%';
+          img.style.objectFit = 'contain';
+          toggleButton.appendChild(img);
+        } else {
+          toggleButton.innerText = buttonEmoji;
+        }
         toggleButton.style.cssText = `
           position: fixed;
           ${launcherPosition}: 20px;
           bottom: 20px;
           width: ${launcherSize}px;
           height: ${launcherSize}px;
-          background: ${themeColor};
-          color: white;
-          border-radius: ${appearance.launcherShape === 'kare' ? '8px' : '50%'};
+          background: ${launcherFillColor};
+          color: ${launcherIconColor};
+          border-radius: ${appearance.launcherShape === 'kare' ? '16px' : '9999px'};
+          border: 1px solid ${launcherBorderColor};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -63,6 +83,30 @@
           box-shadow: 0 2px 10px rgba(0,0,0,0.2);
           transition: transform 0.2s, box-shadow 0.2s;
         `;
+
+        if (launcherIconType !== 'image' || !chatIconUrl) {
+          toggleButton.style.fontSize = `${Math.max(20, launcherSize * 0.45)}px`;
+        }
+
+        const bubbleTail = document.createElement('span');
+        bubbleTail.style.cssText = `
+          position: absolute;
+          ${launcherPosition === 'left' ? 'left: 10px;' : 'right: 10px;'}
+          bottom: -6px;
+          width: 14px;
+          height: 14px;
+          background: ${launcherFillColor};
+          transform: rotate(45deg);
+          border-bottom: 1px solid ${launcherBorderColor};
+          border-${launcherPosition === 'left' ? 'right' : 'left'}: 1px solid ${launcherBorderColor};
+          border-top: none;
+          border-${launcherPosition === 'left' ? 'left' : 'right'}: none;
+          z-index: -1;
+        `;
+        toggleButton.style.position = 'fixed';
+        toggleButton.style.padding = '0';
+
+        toggleButton.appendChild(bubbleTail);
         
         // Hover efekti
         toggleButton.addEventListener('mouseenter', () => {
@@ -82,7 +126,7 @@
         const toggleChat = () => {
           isOpen = !isOpen;
           iframe.style.display = isOpen ? 'block' : 'none';
-          
+
           // Buton animasyonu
           if (isOpen) {
             toggleButton.style.transform = 'scale(0.9)';
@@ -97,7 +141,12 @@
             const welcomeEvent = {
               type: 'CHAT_EVENT',
               event: 'welcome',
-              message: welcomeMessage
+              message: welcomeMessage,
+              meta: {
+                headerHeight,
+                avatarSize,
+                avatarBackground,
+              },
             };
             iframe.contentWindow.postMessage(welcomeEvent, '*');
           }

@@ -41,6 +41,8 @@
         align-items: center;
         gap: 8px;
         color: #ffffff;
+        min-height: 56px;
+        transition: all 0.2s ease;
       }
       .chat-avatar {
         width: 32px;
@@ -52,6 +54,7 @@
         align-items: center;
         justify-content: center;
         font-size: 18px;
+        transition: all 0.2s ease;
       }
       .chat-avatar img {
         width: 100%;
@@ -191,13 +194,16 @@
             if (!data || !data.ok || !data.appearance) return;
             var ap = data.appearance;
 
-            if (ap.themeColor) {
-              header.style.background = ap.themeColor;
-              sendBtn.style.background = ap.themeColor;
-            } else {
-              header.style.background = '#2563eb';
-              sendBtn.style.background = '#2563eb';
-            }
+            var headerHeight = ap.headerHeight || 56;
+            var avatarSize = ap.avatarSize || Math.max(Math.round(headerHeight * 0.6), 28);
+            var avatarBg = ap.avatarBackground || 'rgba(255,255,255,0.3)';
+            var verticalPadding = Math.max(8, (headerHeight - avatarSize) / 2);
+
+            var themeColor = ap.themeColor || '#2563eb';
+            header.style.background = themeColor;
+            header.style.padding = verticalPadding + 'px 14px';
+            header.style.minHeight = headerHeight + 'px';
+            sendBtn.style.background = themeColor;
 
             if (ap.title) {
               titleEl.textContent = ap.title;
@@ -209,6 +215,20 @@
               img.src = ap.botAvatarUrl;
               img.alt = 'Chatbot Avatar';
               avatarEl.appendChild(img);
+            } else {
+              avatarEl.textContent = '🤖';
+            }
+
+            avatarEl.style.width = avatarSize + 'px';
+            avatarEl.style.height = avatarSize + 'px';
+            avatarEl.style.fontSize = Math.max(16, Math.round(avatarSize * 0.55)) + 'px';
+
+            if (avatarBg === 'transparent') {
+              avatarEl.style.background = 'transparent';
+              avatarEl.style.border = '1px solid rgba(255,255,255,0.5)';
+            } else {
+              avatarEl.style.background = avatarBg;
+              avatarEl.style.border = 'none';
             }
           })
           .catch(function (err) {

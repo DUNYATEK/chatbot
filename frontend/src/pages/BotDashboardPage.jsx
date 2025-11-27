@@ -93,6 +93,9 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
     launcherAnimation: 'hicbiri',
     botAvatarUrl: '',
     chatIconUrl: '',
+    headerHeight: 56,
+    avatarSize: 32,
+    avatarBackground: 'rgba(255,255,255,0.3)',
     openOnLoadDesktopOnly: false,
     hidePlatformBranding: false,
     customBrandingEnabled: false,
@@ -117,6 +120,14 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
   const [leadFormErrors, setLeadFormErrors] = useState({});
   const [leadFormCompleted, setLeadFormCompleted] = useState(false);
   const [appearanceSaveMessage, setAppearanceSaveMessage] = useState(null);
+
+  const headerHeightValue = appearance?.headerHeight || 56;
+  const avatarSizeValue = appearance?.avatarSize || Math.max(Math.round(headerHeightValue * 0.6), 28);
+  const headerVerticalPadding = Math.max(8, (headerHeightValue - avatarSizeValue) / 2);
+  const avatarBackgroundValue =
+    appearance?.avatarBackground === 'transparent'
+      ? 'transparent'
+      : appearance?.avatarBackground || 'rgba(255,255,255,0.3)';
 
   const handleDownloadPhpIntegration = () => {
     if (!bot?.id) return;
@@ -2175,6 +2186,37 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                         style={{ width: '100%' }}
                       />
                     </div>
+                    <div>
+                      <div
+                        style={{
+                          marginBottom: 4,
+                        }}
+                      >
+                        Başlık yüksekliği
+                      </div>
+                      <input
+                        type="range"
+                        min={48}
+                        max={120}
+                        value={headerHeightValue}
+                        onChange={(e) =>
+                          setAppearance((prev) => ({
+                            ...prev,
+                            headerHeight: Number(e.target.value),
+                          }))
+                        }
+                        style={{ width: '100%' }}
+                      />
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: '#64748b',
+                          marginTop: 4,
+                        }}
+                      >
+                        {headerHeightValue}px
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -2205,8 +2247,8 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   >
                     <div
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: avatarSizeValue + 24,
+                        height: avatarSizeValue + 24,
                         borderRadius: '50%',
                         background: '#e2e8f0',
                         overflow: 'hidden',
@@ -2267,6 +2309,89 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                         PNG, JPG gibi kare bir görsel yükleyin.
                       </div>
                     </div>
+                  </div>
+                </section>
+
+                <section
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Avatar boyutu
+                    </div>
+                    <input
+                      type="range"
+                      min={28}
+                      max={80}
+                      value={avatarSizeValue}
+                      onChange={(e) =>
+                        setAppearance((prev) => ({
+                          ...prev,
+                          avatarSize: Number(e.target.value),
+                        }))
+                      }
+                      style={{ width: '100%' }}
+                    />
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: '#64748b',
+                        marginTop: 4,
+                      }}
+                    >
+                      {avatarSizeValue}px
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Avatar arka planı
+                    </div>
+                    <input
+                      type="color"
+                      value={avatarBackgroundValue.startsWith('rgba') ? '#ffffff' : avatarBackgroundValue}
+                      onChange={(e) =>
+                        setAppearance((prev) => ({
+                          ...prev,
+                          avatarBackground: e.target.value,
+                        }))
+                      }
+                      style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid #d0d7e2' }}
+                    />
+                    <label
+                      style={{
+                        marginTop: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: 12,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={avatarBackgroundValue === 'transparent'}
+                        onChange={(e) =>
+                          setAppearance((prev) => ({
+                            ...prev,
+                            avatarBackground: e.target.checked ? 'transparent' : '#ffffff',
+                          }))
+                        }
+                      />
+                      Arka planı şeffaf yap
+                    </label>
                   </div>
                 </section>
 
@@ -2971,6 +3096,9 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                         privacyUrl: 'https://',
                         launcherShape: 'daire',
                         launcherSize: 72,
+                        headerHeight: 56,
+                        avatarSize: 32,
+                        avatarBackground: 'rgba(255,255,255,0.3)',
                         launcherBarText: '',
                         themeColor: '#2563eb',
                         attentionSound: 'hicbiri',
@@ -2993,40 +3121,65 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                   >
                     Görünümü Sıfırla
                   </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!bot?.id) return;
-                      try {
-                        await saveBotAppearance(bot.id, {
-                          appearance,
-                          formFields,
-                        });
-                        setAppearanceSaveMessage({
-                          type: 'success',
-                          text: 'Görsel ayarlar başarıyla kaydedildi.',
-                        });
-                      } catch (err) {
-                        console.error('Appearance kaydedilemedi', err);
-                        setAppearanceSaveMessage({
-                          type: 'error',
-                          text: 'Ayarlar kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.',
-                        });
-                      }
-                    }}
-                    style={{
-                      padding: '8px 20px',
-                      borderRadius: 9999,
-                      border: 'none',
-                      background: '#2563eb',
-                      color: 'white',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Değişiklikleri Kaydet
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!bot?.id) return;
+                        try {
+                          await saveBotAppearance(bot.id, {
+                            appearance,
+                            formFields,
+                          });
+                          setAppearanceSaveMessage({
+                            type: 'success',
+                            text: 'Görsel ayarlar başarıyla kaydedildi.',
+                          });
+                        } catch (err) {
+                          console.error('Appearance kaydedilemedi', err);
+                          setAppearanceSaveMessage({
+                            type: 'error',
+                            text: 'Ayarlar kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.',
+                          });
+                        }
+                      }}
+                      style={{
+                        padding: '8px 20px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#2563eb',
+                        color: 'white',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Değişiklikleri Kaydet
+                    </button>
+                    {appearanceSaveMessage && (
+                      <div
+                        style={{
+                          alignSelf: 'stretch',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: appearanceSaveMessage.type === 'success' ? '#166534' : '#9f1239',
+                          background:
+                            appearanceSaveMessage.type === 'success'
+                              ? '#ecfdf5'
+                              : '#fef2f2',
+                          border:
+                            appearanceSaveMessage.type === 'success'
+                              ? '1px solid #bbf7d0'
+                              : '1px solid #fecdd3',
+                          textAlign: 'right',
+                        }}
+                      >
+                        {appearanceSaveMessage.text}
+                      </div>
+                    )}
+                  </div>
                 </section>
               </div>
             </div>
@@ -3633,24 +3786,31 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
             <div
               style={{
                 background: appearance.themeColor,
-                padding: '10px 14px',
+                padding: `${headerVerticalPadding}px 14px`,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
                 color: '#ffffff',
+                minHeight: headerHeightValue,
+                transition: 'all 0.2s ease',
               }}
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: avatarSizeValue,
+                  height: avatarSizeValue,
                   borderRadius: '9999px',
-                  background: 'rgba(255,255,255,0.3)',
+                  background: avatarBackgroundValue,
+                  border:
+                    avatarBackgroundValue === 'transparent'
+                      ? '1px solid rgba(255,255,255,0.4)'
+                      : 'none',
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 16,
+                  fontSize: Math.max(16, Math.round(avatarSizeValue * 0.55)),
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {appearance.botAvatarUrl ? (
