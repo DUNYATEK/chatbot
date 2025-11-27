@@ -116,6 +116,7 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
   });
   const [leadFormErrors, setLeadFormErrors] = useState({});
   const [leadFormCompleted, setLeadFormCompleted] = useState(false);
+  const [appearanceSaveMessage, setAppearanceSaveMessage] = useState(null);
 
   const handleDownloadPhpIntegration = () => {
     if (!bot?.id) return;
@@ -993,6 +994,28 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                     >
                       Değişiklikleri Kaydet
                     </button>
+                    {appearanceSaveMessage && (
+                      <div
+                        style={{
+                          marginTop: 12,
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: appearanceSaveMessage.type === 'success' ? '#166534' : '#9f1239',
+                          background:
+                            appearanceSaveMessage.type === 'success'
+                              ? '#ecfdf5'
+                              : '#fef2f2',
+                          border:
+                            appearanceSaveMessage.type === 'success'
+                              ? '1px solid #bbf7d0'
+                              : '1px solid #fecdd3',
+                        }}
+                      >
+                        {appearanceSaveMessage.text}
+                      </div>
+                    )}
                   </div>
                 </section>
               </div>
@@ -2979,8 +3002,16 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                           appearance,
                           formFields,
                         });
+                        setAppearanceSaveMessage({
+                          type: 'success',
+                          text: 'Görsel ayarlar başarıyla kaydedildi.',
+                        });
                       } catch (err) {
                         console.error('Appearance kaydedilemedi', err);
+                        setAppearanceSaveMessage({
+                          type: 'error',
+                          text: 'Ayarlar kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.',
+                        });
                       }
                     }}
                     style={{
@@ -3334,6 +3365,41 @@ export default function BotDashboardPage({ user, bot, onBackToList, onCreateNewB
                         Kopyala
                       </button>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          'https://dunyatekchatbot.netlify.app/plugins/dunyatek-chatbot.zip',
+                          '_blank',
+                        );
+                      }}
+                      style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 9999,
+                        border: 'none',
+                        background: '#0f172a',
+                        color: '#ffffff',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      WordPress Eklentisini İndir
+                    </button>
+
+                    <p
+                      style={{
+                        marginTop: 10,
+                        fontSize: 12,
+                        color: '#475569',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      ZIP dosyasını indirip WordPress yönetim panelinde <strong>Eklentiler &rarr; Yeni Ekle &rarr; Eklenti Yükle</strong> adımlarını izleyerek yükleyebilirsiniz.
+                    </p>
                   </div>
 
                   {/* Instagram */}
