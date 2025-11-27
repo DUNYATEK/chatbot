@@ -928,7 +928,6 @@ app.post('/api/chat-llm', async (req, res, next) => {
   }
 });
 
-// LLM durumunu dönen endpoint (anahtarı asla geri döndürmez)
 // Bot adını güncelle
 app.put('/api/bots/:botId', (req, res, next) => {
   try {
@@ -992,7 +991,7 @@ if (!function_exists('dunyatek_chatbot_load_widget')) {
         window.dunyatekChatbotConfig = {
             botId: <?php echo DUNYATEK_BOT_ID; ?>,
             apiUrl: '<?php echo DUNYATEK_API_URL; ?>',
-            buttonText: '💬',
+            buttonText: '',
             buttonColor: '#2563eb',
             position: 'right',
             autoInit: true
@@ -1035,6 +1034,69 @@ if (!defined('WPINC') && php_sapi_name() !== 'cli' && basename(__FILE__) === bas
   } catch (error) {
     console.error('PHP entegrasyon dosyası oluşturulurken hata:', error);
     return res.status(500).json({ ok: false, message: 'PHP dosyası oluşturulamadı' });
+  }
+});
+
+// WordPress eklentisini ZIP olarak oluşturan endpoint
+app.get('/api/bots/:botId/plugin-zip', async (req, res) => {
+  try {
+    const botId = Number(req.params.botId);
+    if (!botId) {
+      return res.status(400).json({ ok: false, message: 'Geçersiz botId' });
+    }
+
+    const bots = readJson('bots.json');
+    const bot = bots.find((b) => b.id === botId);
+    if (!bot) {
+      return res.status(404).json({ ok: false, message: 'Bot bulunamadı' });
+    }
+
+    const templatePath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'frontend',
+      'public',
+      'plugins',
+      'dunyatek-chatbot.php',
+    );
+
+    if (!fs.existsSync(templatePath)) {
+      console.error('Plugin şablonu bulunamadı:', templatePath);
+      return res.status(500).json({ ok: false, message: 'Plugin şablonu bulunamadı' });
+    }
+
+    const raw = fs.readFileSync(templatePath, 'utf-8');
+    const pluginPhp = raw.replace(/__BOT_ID__/g, String(botId));
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="dunyatek-chatbot-${botId}.zip"`,
+    );
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', (error) => {
+      console.error('Plugin ZIP oluşturulurken hata:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ ok: false, message: 'ZIP oluşturulamadı' });
+      } else {
+        res.end();
+      }
+    });
+
+    archive.pipe(res);
+    archive.append(pluginPhp, {
+      name: 'dunyatek-chatbot/dunyatek-chatbot.php',
+      date: new Date(),
+    });
+    await archive.finalize();
+  } catch (error) {
+    console.error('Plugin ZIP oluşturulurken hata:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ ok: false, message: 'ZIP oluşturulamadı' });
+    }
+    res.end();
   }
 });
 
